@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chesstempo Comment Board Generator</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css" />
+  <style>
+    body { font-family: sans-serif; max-width: 900px; margin: auto; padding: 20px; }
+    #board { width: 400px; margin-top: 10px; }
+    textarea { width: 100%; height: 120px; }
+    button { margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h2>Chesstempo Comment Board Generator</h2>
+
+  <label>Initial FEN:</label>
+  <input id="fenInput" style="width:100%" />
+  <button onclick="loadFEN()">Load FEN</button>
+  <button onclick="flipBoard()">Flip Board</button>
+
+  <div id="board"></div>
+
+  <h3>Moves (auto-generated from board)</h3>
+  <textarea id="movesText"></textarea>
+
+  <button onclick="copyComment()">Copy Comment</button>
+
+  <h3>Generated Chesstempo Comment</h3>
+  <textarea id="output" readonly></textarea>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js" integrity="sha512-ujGsB4vTyNcSuViwM2DJ0+G2BIViQJl2rVBZBekStznA9Hq96+Wd9+jwu9zlttp0U2/9CYhgR7pOt2j+E6yewg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"
+        integrity="sha384-8Vi8VHwn3vjQ9eUHUxex3JSN/NFqUg3QbPyX8kWyb93+8AC/pPWTzj+nHtbC5bxD"
+        crossorigin="anonymous"></script>
+  <script src="app.js"></script>
+</body>
+</html>
