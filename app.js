@@ -5,7 +5,10 @@ let startingFEN = "";
 let ignoreMoveUpdate = false;
 
 function loadFEN() {
-  startingFEN = document.getElementById("fenInput").value.trim();
+  startingFEN = document
+    .getElementById("fenInput")
+    .value.trim()
+    .replace(/.$/, "1");
   if (!game.load(startingFEN)) {
     alert("Invalid FEN");
     return;
