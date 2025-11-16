@@ -164,19 +164,11 @@ function onSnapEnd() {
 
 document.addEventListener("DOMContentLoaded", () => {
   board = Chessboard("board", {
+    pieceTheme: "img/chesspieces/alpha/{piece}.png",
     draggable: true,
     position: "start",
     onDrop: onDrop,
     onSnapEnd: onSnapEnd,
-
-    // Mobile-friendly settings
-    pieceTheme: undefined,
-    moveSpeed: 0,
-    snapBackSpeed: 0,
-    snapSpeed: 0,
-    appearSpeed: 0,
-    // Allow tapping instead of drag
-    sparePieces: false,
   });
 
   // Initialize with standard starting position
