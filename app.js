@@ -24,11 +24,38 @@ function updateMoves() {
   if (ignoreMoveUpdate) return;
 
   const moves = game.history({ verbose: true });
-  let movesText = moves.map((move) => move.san).join(" ");
+  let movesText = "";
+
+  // Determine starting move number and whose turn it is from FEN
+  const fenParts = startingFEN.split(" ");
+  let moveNumber = parseInt(fenParts[5]) || 1;
+  let isWhiteTurn = fenParts[1] === "w";
+
+  for (let i = 0; i < moves.length; i++) {
+    if (isWhiteTurn) {
+      // White move: "1.e4" or "2.Nf3"
+      movesText += `${moveNumber}.${moves[i].san} `;
+      isWhiteTurn = false;
+    } else {
+      // Black move
+      if (i === 0 && fenParts[1] === "b") {
+        // First move is black: "1...e5"
+        movesText += `${moveNumber}...${moves[i].san} `;
+      } else {
+        // Subsequent black moves: "Nf6" (no dots)
+        movesText += `${moves[i].san} `;
+      }
+      moveNumber++;
+      isWhiteTurn = true;
+    }
+  }
+
   document.getElementById("movesText").value = movesText.trim();
 
   const tag = `[moves ${flipped ? "flip=true" : ""} start=${startingFEN}]`;
-  document.getElementById("output").value = `${tag}${movesText} [/moves]`;
+  document.getElementById(
+    "output"
+  ).value = `${tag}${movesText.trim()} [/moves]`;
 }
 
 function copyComment() {
