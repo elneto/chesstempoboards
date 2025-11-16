@@ -56,15 +56,21 @@ function generateMoves() {
   for (let i = 1; i <= currentMoveIndex; i++) {
     const moveObj = moveHistory[i];
     if (isWhiteTurn) {
+      // White move
       movesText += `${moveNumber}.${moveObj.move} `;
       isWhiteTurn = false;
     } else {
+      // Black move
       if (i === 1 && fenParts[1] === "b") {
+        // First move is black: use 0...
         movesText += `0...${moveObj.move} `;
+        // Don't increment move number yet - wait for the next white move
       } else {
+        // Regular black move
         movesText += `${moveObj.move} `;
+        // After a black move (except the very first one), increment move number
+        moveNumber++;
       }
-      moveNumber++;
       isWhiteTurn = true;
     }
   }
