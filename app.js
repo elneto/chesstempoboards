@@ -3,7 +3,8 @@ let board = null;
 let flipped = false;
 let startingFEN = "";
 let ignoreMoveUpdate = false;
-let moveHistory = []; // Store positions for navigation
+let moveHistory = [];
+let currentMoveIndex = 0;
 
 function loadFEN() {
   startingFEN = document
@@ -15,54 +16,53 @@ function loadFEN() {
     return;
   }
   board.position(game.fen());
-  updateMoveHistory();
-  updateMoves();
+  resetMoveHistory();
+  generateMoves();
 }
 
 function flipBoard() {
   flipped = !flipped;
   board.flip();
-  updateMoves();
+  updateOutput();
 }
 
-function updateMoveHistory() {
-  // Store current position in history
+function resetMoveHistory() {
   moveHistory = [];
   const tempGame = new Chess(startingFEN);
-  moveHistory.push(tempGame.fen());
+  moveHistory.push({
+    fen: tempGame.fen(),
+    move: null,
+  });
 
   // Replay all moves to build history
   const moves = game.history();
   for (let move of moves) {
     tempGame.move(move);
-    moveHistory.push(tempGame.fen());
+    moveHistory.push({
+      fen: tempGame.fen(),
+      move: move,
+    });
   }
+  currentMoveIndex = moveHistory.length - 1;
 }
 
-function updateMoves() {
-  if (ignoreMoveUpdate) return;
-
-  const moves = game.history({ verbose: true });
+function generateMoves() {
+  // Only generate moves up to current position
   let movesText = "";
-
-  // Determine starting move number and whose turn it is from FEN
   const fenParts = startingFEN.split(" ");
   let moveNumber = parseInt(fenParts[5]) || 1;
   let isWhiteTurn = fenParts[1] === "w";
 
-  for (let i = 0; i < moves.length; i++) {
+  for (let i = 1; i <= currentMoveIndex; i++) {
+    const moveObj = moveHistory[i];
     if (isWhiteTurn) {
-      // White move: "1.e4" or "2.Nf3"
-      movesText += `${moveNumber}.${moves[i].san} `;
+      movesText += `${moveNumber}.${moveObj.move} `;
       isWhiteTurn = false;
     } else {
-      // Black move
-      if (i === 0 && fenParts[1] === "b") {
-        // First move is black: "0...e5"
-        movesText += `0...${moves[i].san} `;
+      if (i === 1 && fenParts[1] === "b") {
+        movesText += `0...${moveObj.move} `;
       } else {
-        // Subsequent black moves: "Nf6" (no dots)
-        movesText += `${moves[i].san} `;
+        movesText += `${moveObj.move} `;
       }
       moveNumber++;
       isWhiteTurn = true;
@@ -70,14 +70,13 @@ function updateMoves() {
   }
 
   document.getElementById("movesText").value = movesText.trim();
+  updateOutput();
+}
 
+function updateOutput() {
+  const movesText = document.getElementById("movesText").value.trim();
   const tag = `[moves ${flipped ? "flip=true" : ""} start=${startingFEN}]`;
-  document.getElementById(
-    "output"
-  ).value = `${tag}${movesText.trim()} [/moves]`;
-
-  // Update navigation buttons state
-  updateNavigationButtons();
+  document.getElementById("output").value = `${tag}${movesText} [/moves]`;
 }
 
 function copyComment() {
@@ -87,25 +86,27 @@ function copyComment() {
 }
 
 function onDragStart(source, piece, position, orientation) {
-  // Allow all drags - we'll validate in onDrop
   return true;
 }
 
 function onDrop(obj) {
-  // Handle both parameter formats
   let source, target;
 
   if (typeof obj === "object" && obj.source && obj.target) {
-    // Object format: {source: 'e2', target: 'e4'}
     source = obj.source;
     target = obj.target;
   } else {
-    // Separate parameter format (deprecated)
     source = arguments[0];
     target = arguments[1];
   }
 
   console.log("Drop from", source, "to", target);
+
+  // If we're not at the end of the move history, create a new branch
+  if (currentMoveIndex < moveHistory.length - 1) {
+    // Load the position we're currently viewing
+    game.load(moveHistory[currentMoveIndex].fen);
+  }
 
   const move = game.move({
     from: source,
@@ -118,9 +119,20 @@ function onDrop(obj) {
     return "snapback";
   }
 
+  // If we made a move from a historical position, truncate the history
+  if (currentMoveIndex < moveHistory.length - 1) {
+    moveHistory = moveHistory.slice(0, currentMoveIndex + 1);
+  }
+
+  // Add the new move to history
+  moveHistory.push({
+    fen: game.fen(),
+    move: move.san,
+  });
+  currentMoveIndex = moveHistory.length - 1;
+
   board.position(game.fen());
-  updateMoveHistory();
-  updateMoves();
+  generateMoves();
   return move;
 }
 
@@ -131,50 +143,58 @@ function onSnapEnd() {
 // Navigation functions
 function goToStart() {
   if (moveHistory.length > 0) {
-    game.load(moveHistory[0]);
-    board.position(moveHistory[0]);
-    updateMoves();
+    currentMoveIndex = 0;
+    game.load(moveHistory[currentMoveIndex].fen);
+    board.position(moveHistory[currentMoveIndex].fen);
+    updateNavigationButtons();
+    updateOutput();
   }
 }
 
 function goToEnd() {
   if (moveHistory.length > 0) {
-    game.load(moveHistory[moveHistory.length - 1]);
-    board.position(moveHistory[moveHistory.length - 1]);
-    updateMoves();
+    currentMoveIndex = moveHistory.length - 1;
+    game.load(moveHistory[currentMoveIndex].fen);
+    board.position(moveHistory[currentMoveIndex].fen);
+    updateNavigationButtons();
+    updateOutput();
   }
 }
 
 function goBack() {
-  const currentFEN = game.fen();
-  const currentIndex = moveHistory.findIndex((fen) => fen === currentFEN);
-  if (currentIndex > 0) {
-    game.load(moveHistory[currentIndex - 1]);
-    board.position(moveHistory[currentIndex - 1]);
-    updateMoves();
+  if (currentMoveIndex > 0) {
+    currentMoveIndex--;
+    game.load(moveHistory[currentMoveIndex].fen);
+    board.position(moveHistory[currentMoveIndex].fen);
+    updateNavigationButtons();
+    updateOutput();
   }
 }
 
 function goForward() {
-  const currentFEN = game.fen();
-  const currentIndex = moveHistory.findIndex((fen) => fen === currentFEN);
-  if (currentIndex < moveHistory.length - 1) {
-    game.load(moveHistory[currentIndex + 1]);
-    board.position(moveHistory[currentIndex + 1]);
-    updateMoves();
+  if (currentMoveIndex < moveHistory.length - 1) {
+    currentMoveIndex++;
+    game.load(moveHistory[currentMoveIndex].fen);
+    board.position(moveHistory[currentMoveIndex].fen);
+    updateNavigationButtons();
+    updateOutput();
   }
 }
 
 function updateNavigationButtons() {
-  const currentFEN = game.fen();
-  const currentIndex = moveHistory.findIndex((fen) => fen === currentFEN);
-
-  document.getElementById("btnStart").disabled = currentIndex <= 0;
-  document.getElementById("btnBack").disabled = currentIndex <= 0;
+  document.getElementById("btnStart").disabled = currentMoveIndex <= 0;
+  document.getElementById("btnBack").disabled = currentMoveIndex <= 0;
   document.getElementById("btnForward").disabled =
-    currentIndex >= moveHistory.length - 1;
+    currentMoveIndex >= moveHistory.length - 1;
   document.getElementById("btnEnd").disabled =
-    currentIndex >= moveHistory.length - 1;
+    currentMoveIndex >= moveHistory.length - 1;
+}
+
+function setupMovesTextListener() {
+  const movesTextarea = document.getElementById("movesText");
+  movesTextarea.addEventListener("input", function () {
+    updateOutput();
+  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -185,9 +205,8 @@ document.addEventListener("DOMContentLoaded", () => {
     dropOffBoard: "snapback",
     sparePieces: false,
     orientation: "white",
-    touchScreen: true, // Important for mobile devices
+    touchScreen: true,
 
-    // Event handlers
     onDragStart: onDragStart,
     onDrop: onDrop,
     onSnapEnd: onSnapEnd,
@@ -195,12 +214,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initialize with standard starting position
   startingFEN = game.fen();
-  updateMoveHistory();
-  updateMoves();
+  resetMoveHistory();
+  generateMoves();
 
   // Add event listeners for navigation buttons
   document.getElementById("btnStart").addEventListener("click", goToStart);
   document.getElementById("btnBack").addEventListener("click", goBack);
   document.getElementById("btnForward").addEventListener("click", goForward);
   document.getElementById("btnEnd").addEventListener("click", goToEnd);
+
+  setupMovesTextListener();
 });
